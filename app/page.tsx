@@ -33,7 +33,7 @@ export default function Dashboard() {
         .from('daman_history')
         .select('*')
         .order('period', { ascending: true })
-        .limit(1000); 
+        .limit(10000); 
 
       if (!error && data) {
         setHistory(data as HistoryRecord[]);
