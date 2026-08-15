@@ -29,6 +29,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
+      // Limit 10000 kar di gayi hai taaki saara data fetch ho sake
       const { data, error } = await supabase
         .from('daman_history')
         .select('*')
