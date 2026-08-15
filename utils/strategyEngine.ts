@@ -1,22 +1,22 @@
-
 export interface HistoryRecord {
   period: string;
   result_type: 'big' | 'small';
+  number?: number;
+  color?: string;
+  created_at?: string;
 }
 
-export interface StrategyResults {
-  totalAnalyzed: number;
-  triggersFound: number;
-  winDistribution: { level: string; count: number }[];
-  failedCount: number;
+export interface RowAnalysis extends HistoryRecord {
+  signalStatus: 'NORMAL' | 'TRIGGER' | 'WIN' | 'LOSS_RECOVERY';
+  levelInfo?: string;
 }
 
-export function runBacktest(
+export function runBacktestWithDetails(
   data: HistoryRecord[],
   target: 'big' | 'small' = 'big',
   triggerAlternatingCount: number = 3,
   maxLevels: number = 9
-): StrategyResults {
+) {
   let triggersFound = 0;
   let failedCount = 0;
   
@@ -27,56 +27,58 @@ export function runBacktest(
   const winCounts: Record<number, number> = {};
   for (let i = 1; i <= maxLevels; i++) winCounts[i] = 0;
 
-  // Oldest se newest data analyze karna
+  const analyzedRows: RowAnalysis[] = data.map(row => ({ ...row, signalStatus: 'NORMAL' }));
+
   for (let i = 1; i < data.length; i++) {
     const current = data[i].result_type;
     const previous = data[i - 1].result_type;
 
     if (status === 'WAITING') {
       if (current === target && previous !== target) {
-        altCount++; // Target mila, jo pichle se alag hai (Alternating)
+        altCount++;
       } else if (current === target && previous === target) {
-        altCount = 0; // Double aa gaya, pattern reset
+        altCount = 0;
       }
 
       if (altCount === triggerAlternatingCount) {
         status = 'BETTING';
         triggersFound++;
         currentLevel = 1;
+        analyzedRows[i].signalStatus = 'TRIGGER';
+        analyzedRows[i].levelInfo = `L${currentLevel} Bet`;
       }
     } 
-    
     else if (status === 'BETTING') {
       if (current === target) {
-        // WIN (Double aa gaya!)
         winCounts[currentLevel]++;
+        analyzedRows[i].signalStatus = 'WIN';
+        analyzedRows[i].levelInfo = `Win @ L${currentLevel}`;
         status = 'WAITING';
-        altCount = 0; // Reset for next fresh pattern
+        altCount = 0;
       } else {
-        // LOSS (Alternating continue raha)
         currentLevel++;
         if (currentLevel > maxLevels) {
-          // 9 Levels cross ho gaye - FAILED
           failedCount++;
+          analyzedRows[i].signalStatus = 'LOSS_RECOVERY';
+          analyzedRows[i].levelInfo = `Failed (>L${maxLevels})`;
           status = 'WAITING';
           altCount = 0;
         } else {
-          // Option B: Wait for the next target to drop before betting again
+          analyzedRows[i].signalStatus = 'LOSS_RECOVERY';
+          analyzedRows[i].levelInfo = `Loss -> Wait for L${currentLevel}`;
           status = 'WAITING_RECOVERY';
         }
       }
     } 
-    
     else if (status === 'WAITING_RECOVERY') {
       if (current === target) {
-        // Target wapas aa gaya hai! Ab next round par humari bet hogi
         status = 'BETTING';
+        analyzedRows[i].signalStatus = 'TRIGGER';
+        analyzedRows[i].levelInfo = `L${currentLevel} Bet (Recovery)`;
       }
-      // Agar current opposite hai, toh chupchap wait karte raho (No level loss)
     }
   }
 
-  // UI ke liye Chart Data format karna
   const winDistribution = Object.keys(winCounts).map(level => ({
     level: `L${level}`,
     count: winCounts[parseInt(level)]
@@ -86,6 +88,7 @@ export function runBacktest(
     totalAnalyzed: data.length,
     triggersFound,
     winDistribution,
-    failedCount
+    failedCount,
+    analyzedRows
   };
 }
