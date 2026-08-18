@@ -29,22 +29,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      // Limit 10000 kar di gayi hai taaki saara data fetch ho sake
+      // ⚡ Limit ko 1 Lakh (100000) kar diya gaya hai
       const { data, error } = await supabase
         .from('daman_history')
         .select('*')
         .order('period', { ascending: true })
-        .limit(10000); 
+        .limit(100000); 
 
       if (!error && data) {
         setHistory(data as HistoryRecord[]);
+      } else {
+        console.error("Fetch Error:", error);
       }
       setLoading(false);
     }
     fetchData();
   }, []);
 
-  if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-indigo-500 font-bold">Fetching Supabase Data...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-indigo-500 font-bold">Fetching 1 Lakh Records from Supabase... Please Wait</div>;
 
   const results = runBacktestWithDetails(history, target, triggerCount, maxLevels);
 
@@ -64,8 +66,8 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto space-y-8">
         
         <header className="pb-4 border-b border-gray-800">
-          <h1 className="text-3xl font-extrabold text-white">Research <span className="text-indigo-500">Engine</span> with Direct Indicators</h1>
-          <p className="text-gray-400 mt-1">Option B Logic: Pattern Validation & Table Indicators</p>
+          <h1 className="text-3xl font-extrabold text-white">Research <span className="text-indigo-500">Engine</span></h1>
+          <p className="text-gray-400 mt-1">Analyzing up to 1 Lakh Records for Pattern Validation</p>
         </header>
 
         {/* Controls */}
@@ -167,4 +169,5 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+          }
+                    
